@@ -1,0 +1,198 @@
+{% block content %}
+
+    <hr>
+    includes_entry_form.html begins here ----
+    <br>
+    <br>
+    <hr>
+    <br>
+    <br>
+
+    {% if kit_data|length > 1 %}
+
+        <div id="has-kit">
+            <table border="2">
+                <thead>
+                    <tr>
+                        <th>Scale 1:(x) </th>
+                        <th>Grade</th>
+                        <th>Kit Name</th>
+                        <th>Material</th>
+                        <th>Condition</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td> Exiting kit info </td>
+                    </tr>
+                
+
+                    <tr>
+                        <td>{{ kit_data['scale'] }}</td>
+                        <td>{{ kit_data['grade'] }}</td>
+                        <td><strong>{{ kit_data['name'] }}</strong></td>
+                        <td>{{ kit_data['material'] }}</td>
+                        <td>{{ kit_data['condition'] }}</td>
+                        <td>{{ kit_data['notes'] }}</td>
+                    </tr> 
+
+                    <tr>
+                        <td>
+                            Input new info
+                        </td>
+                    </tr>
+
+
+                    <tr>
+                        <td>  
+                            <input list="scales" type = "number" min="1" name="scale" value="{{ kit_data['scale'] }}" placeholder="{{ kit_data['scale'] }}" autocomplete="off">
+                            <datalist id="scales">
+                                <option data-value="144">144</option>
+                                <option data-value="100">100</option>
+                                <option data-value="60">60</option>
+                                <option data-value="72">72</option>
+                                <option data-value="8">8</option>
+                                <option data-value="6">6</option>
+                                <option data-value="1000">1000</option>
+                                </datalist>
+                        </td>
+
+                        <td>
+                            <select name="grade">
+                                <option value="" > </option>
+                                <option value="hg" {% if kit_data['grade'] == "hg" %} selected {% endif %}>HG</option>
+                                <option value="mg" {% if kit_data['grade'] == "mg" %} selected {% endif %}>MG</option>
+                                <option value="fg" {% if kit_data['grade'] == "fg" %} selected {% endif %}>FG</option>
+                                <option value="eg" {% if kit_data['grade'] == "eg" %} selected {% endif %}>EG</option>
+                                <option value="rg" {% if kit_data['grade'] == "rg" %} selected {% endif %}>RG</option>
+                                <option value="pg" {% if kit_data['grade'] == "pg" %} selected {% endif %}>PG</option>
+                            </select>
+                        </td>
+
+                        <td>
+                            <input type="text" name="name" value="{{ kit_data['name'] }}">
+                        </td>
+
+                        <td>
+                            <select name="material">
+                                <option value="plastic" {% if kit_data['material'] == "plastic" %} selected {% endif %}>plastic</option>
+                                <option value="resin" {% if kit_data['material'] == "resin" %} selected {% endif %}>resin</option>
+                                <option value="other" {% if kit_data['material'] == "other" %} selected {% endif %}>other</option>
+                            </select>                        
+                        </td>
+
+                        <td>
+                            <select name="condition">
+                                <option value="new" {% if kit_data['condition'] == "new" %} selected {% endif %}>New</option>
+                                <option value="snapped" {% if kit_data['condition'] == "snapped" %} selected {% endif %}>Snapped</option>
+                                <option value="progress" {% if kit_data['condition'] == "progress" %} selected {% endif %}>Progress</option>
+                                <option value="done" {% if kit_data['condition'] == "done" %} selected {% endif %}>Done</option>
+                            </select>
+                        </td>
+
+
+                        <td>               
+                            {% if kit_data['notes'] == True %}
+                                <input type="text" name="notes" size="40" placeholder="ynote here" value="{{ kit_data['notes'] }}">
+                            {% else %}
+                                <input type="text" name="notes" size="40" placeholder="ynote here" value="">
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+
+
+    <div id="not-kit">
+        <table border="2">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>scale</th>
+                    <th>grade</th>
+                    <th>name</th>
+                    <th>condition</th>
+                    <th>material</th>
+                    <th>notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <label for="scale"> Scale?</label>
+                        <input list="scales" type = "number" min="1" name="scale 1/n" autocomplete="off">
+                        <datalist id="scales">
+                            <option data-value="144">44</option>
+                            <option data-value="100">100</option>
+                            <option data-value="60">60</option>
+                            <option data-value="72">72</option>
+                            <option data-value="8">8</option>
+                            <option data-value="6">6</option>
+                            <option data-value="1000">1000</option>
+                            </datalist>
+                    </td>
+
+                    <td>
+                        <label for="grade"> Choose Grade.</label>
+                        <select name="grade">
+                            <option value=""> </option>
+                            <option value="hg">HG</option>
+                            <option value="mg">MG</option>
+                            <option value="fg">FG</option>
+                            <option value="eg">EG</option>
+                            <option value="rg">RG</option>
+                            <option value="pg">PG</option>
+                        </select>
+                    </td>
+
+                    <td>
+                        <label for="name"> Kit name?</label>
+                        <input type="text" name="name" required>
+                    </td>
+
+                    <td>
+                        <label for="material">Material? </label>
+                        <select name="material">
+                            <option value="plastic">plastic</option>
+                            <option value="resin">resin</option>
+                            <option value="other">other</option>
+                        </select>                        
+                    </td>
+
+
+                    <td>
+                        <label for="condition">Condition?</label>
+                        <select name="condition">
+                            <option value="new">New</option>
+                            <option value="snapped">Snapped</option>
+                            <option value="progress">Progress</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </td>
+
+                    <td>
+                        <label for="notes"> Extra notes?</label>
+                        <input type="text" name="notes" size="40" placeholder="notes here" value="">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+
+    {% endif %}
+
+    <br>
+    <br>
+    <br>
+    <hr>
+    
+{% endblock %}
+
+
+

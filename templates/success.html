@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %} Success {% endblock %}
+
+{% block content %}
+
+<!-- redirects to Index.-->
+<script>
+    var time = 1;
+    setInterval(function() {
+      document.getElementById("time").innerHTML = "Redirecting in: " + time;
+      if (time > -1) {
+          time--;
+        } 
+      if (time == -1) {
+        document.getElementById("time").innerHTML = "Time's Up";
+        window.location.href = "/";
+        } 
+    }, 1000);
+
+</script>
+</head>
+
+ <div name="timer-field">
+<br>
+    Timer: <span id="time">Redirecting in: 2 </span>
+</div>
+
+<h1>{{ kit_data['name'] }} SUCCESSFULLY ADDED </h1>
+
+<ul>
+    {% for k, v in kit_data.items() %}
+        <h2><li>{{ k }} : {{ v }}</li></h2>
+    {% endfor %}
+</ul>
+
+
+
+
+{% endblock %}
+
+

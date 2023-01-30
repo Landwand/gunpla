@@ -1,0 +1,87 @@
+{% block content %}
+
+<br>
+<br>
+<hr>
+<br>
+<br>
+
+{mgdebug( {{ kit['scale'] }} )}
+
+
+<form action="/", method="POST">
+
+
+    <label for="scale" id="scale">SCALE: 1/</label>
+    {% if kit|length > 1 %}    
+        <input list="scales" type = "number" name="scale" value="{{ kit['scale'] }}" placeholder="{{ kit['scale'] }}" autocomplete="off">
+    {% else %}
+        <input list="scales" type = "number" name="scale" placeholder="enter scale here" autocomplete="off">
+    {% endif %}
+    <datalist id="scales">
+      <option data-value="144">44</option>
+      <option data-value="100">100</option>
+      <option data-value="60">60</option>
+      <option data-value="72">72</option>
+      <option data-value="8">8</option>
+      <option data-value="6">6</option>
+      <option data-value="1000">1000</option>
+    </datalist>
+    <br>
+
+    <label for="grade">GRADE: </label>
+    {% if kit|length > 1 %} -->       
+        <select name="grade">
+            <option value="" > </option>
+            <option value="hg" {% if kit['grade'] == "hg" %} selected {% endif %}>HG</option>
+            <option value="mg">MG</option>
+            <option value="fg">FG</option>
+            <option value="eg">EG</option>
+            <option value="rg">RG</option>
+            <option value="pg">PG</option>
+    </select><br>
+
+    {% else %} 
+
+    {% endif %}
+
+    <!-- <select name="grade">
+
+        {% for each in kit %}
+        
+        <option value="{{each}}" {% if each == "kit" %} selected {% endif %}>{{each}}</option>
+        
+        {% endfor %}
+        
+    </select> -->
+
+    <input type="text" name="name" placeholder="Kit Name"><br>
+    <label for="material">Material: </label>
+    <select name="material">
+        <option value="plastic">plastic</option>
+        <option value="resin">resin</option>
+        <option value="other">other</option>
+    </select><br>
+
+    <label for="condition">Condition</label>
+    <select name="condition">
+        <option value="new">New</option>
+        <option value="snapped">Snapped</option>
+        <option value="progress">Progress</option>
+        <option value="done">Done</option>
+    </select><br>
+    <input type="text" name="notes" size="40" placeholder="extra notes here">
+    
+
+    <br>
+    <br>
+    <input type="submit" name="submit">
+
+</form>
+</table>
+
+
+{% endblock %}
+
+
+

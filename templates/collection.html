@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block title %} Success {% endblock %}
+
+{% block content %}
+
+
+<h1>Here are your kits</h1>
+<br>
+<br>
+
+<div id="kit-table">
+    <table border="2">
+        <thead>
+            <tr>
+                <th>id</th>
+                <th>scale</th>
+                <th>grade</th>
+                <th>name</th>
+                <th>condition</th>
+                <th>material</th>
+                <th>notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for each in kits %}
+                <tr>
+                    <td>{{ each['id'] }}</td>
+                    <td>{{ each['scale'] }}</td>
+                    {% if each['grade'] == None %}
+                        {% set upr = 'N/A' %}
+                    {% else %}
+                        {% set upr = each['grade'] %}
+                        {% set upr = upr.upper() %}
+                    {% endif %}
+                    <td>{{ upr }}</td>
+                    <td>{{ each['name'] }}</td>
+                    <td>{{ each['condition'] }}</td>
+                    <td>{{ each['material'] }}</td>
+                    <td>{{ each['notes'] }}</td>
+                    <td><a href ="{{ url_for('edit',kit_data=each, kit_id=each['id']) }}"> edit / delete </a> </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+    

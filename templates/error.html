@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %} Error Page {% endblock %}
+
+{% block content %} 
+
+<!-- redirects to Index.-->
+<script>
+    var time = 1;
+    setInterval(function() {
+      document.getElementById("time").innerHTML = "Redirecting in: " + time;
+      if (time > -1) {
+          time--;
+        } 
+      if (time == -1) {
+        //window.location.href = "exit.php";
+        document.getElementById("time").innerHTML = "Time's Up";
+        window.location.href = "/";
+        } 
+    }, 1000);
+ </script>
+
+
+<h1>Error!  {{ msg }} </h1>
+<br>
+<div name="timer-field">
+    Timer: <span id="time">Redirecting in: 2 </span>
+</div>
+
+
+{% endblock %}
