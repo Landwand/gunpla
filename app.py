@@ -14,6 +14,7 @@ conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
 cur = conn.cursor()
 #cur = con.cursor()  # set up cursor obj
 
+
 def has_error(inputs):
 
     app.logger.info("check_inputs started")
@@ -78,13 +79,11 @@ def has_error(inputs):
     kit_vals = {}
     for variable in ["name", "scale", "grade", "condition", "material", "notes"]:
         kit_vals[variable] = eval(variable)
-
     # check_value: 0 = good, 1 = error
     return check_value, msg, kit_vals
 
 
 def update_gunpla(action, kit_data=None, kit_id=None):
-    app.logger.info("FUNCTION update_gunpla STARTED %s")
  
     if kit_data:
         name = str(kit_data['name'])
@@ -101,18 +100,9 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         return 0 
 
     elif action == "update" or action == "edit":
-        app.logger.info(" test 101 'update gunpla' : scale %s", kit_data['scale'])
-
-
-        cur.execute("UPDATE gunpla SET name = ?, scale = ?, material = ?, notes = ?, condition = ?, grade = ? WHERE id = ?", (name, scale, material, notes, condition, grade, kit_id))              
-        # cur.execute ("SELECT * FROM gunpla WHERE id = ?", [kit_id,])        
-
-        # cur.execute("UPDATE gunpla SET (name, scale, material, notes, condition, grade) VALUES (?, ?, ?, ?, ?, ?) WHERE id = ? ", (name, scale, material, notes, condition, grade, kit_id))
-        
+        cur.execute("UPDATE gunpla SET name = ?, scale = ?, material = ?, notes = ?, condition = ?, grade = ? WHERE id = ?", (name, scale, material, notes, condition, grade, kit_id))               
         app.logger.info("FUNC: update_gunpla EDIT now completed!!!!! %s")
         conn.commit()
-
-
         return 0
 
     elif action == "delete":
@@ -124,6 +114,7 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         app.logger.info("Unknown input - update_gunpla in error")
         return 1 # error
 
+
 # no caching of request responses into browser to ensure accuracy when building/troubleshooting
 @app.after_request
 def after_request(response):
@@ -134,8 +125,12 @@ def after_request(response):
     return response
 
 
-# debugger function.  In Jinja: {{ mdebug("any text or variable") }}
-#  {{ mdebug(each) }} type of each
+"""
+debugger function.  
+To use (print to Terminal)
+- in Jinja: {{ mdebug("any text or variable") }}
+- find type: {{ mdebug(each) }} type of each
+"""
 @app.context_processor
 def utility_functions():
     def print_in_console(message):
@@ -180,7 +175,7 @@ def index():
         return render_template("success.html", action="add", kit_data=kit_data)
 
 
-@app.route('/page/<kits>', methods=["GET", "POST"])
+@app.route('/collection/<kits>', methods=["GET", "POST"])
 def collection(kits):
     cur.execute ("SELECT * FROM gunpla ORDER BY id ASC")
     rows = cur.fetchall()
@@ -188,16 +183,23 @@ def collection(kits):
     return render_template('collection.html', kits=rows)
 
 
-@app.route('/edit/<kit_data>,<kit_id>', methods=["GET", "POST"])
-def edit(kit_id=None, kit_data=None):
+@app.route('/edit/<kit_id>', methods=["GET", "POST"])
+def edit(kit_id=None):
 
     if request.method == "GET":        
         # GET request
         print("Edit page loaded in GET mode")
         cur.execute ("SELECT * FROM gunpla WHERE id = ?", [kit_id,])
         row = cur.fetchone()
-        print(row)
-        return render_template('edit.html', kit_data=row, kit_id=kit_id)
+        kit_data = {
+            'name' : row['name'],
+            'scale' : row['scale'],
+            'grade' : row['grade'],
+            'condition': row['condition'],
+            'notes': row['notes'],
+            'material': row['material'],
+            'id': row['id']}
+        return render_template('edit.html', kit_data=kit_data, kit_id=kit_id)
 
     if request.method == "POST":
         app.logger.info("%s edit page ===== POSTING, ", kit_id)
@@ -208,7 +210,6 @@ def edit(kit_id=None, kit_data=None):
         'notes' : request.form.get("notes"),
         'scale' : request.form.get("scale"),
         'material' : request.form.get("material"),
-        'notes' : request.form.get("notes"),
         'id': kit_id}
 
         if request.form.get("choice") == "Delete Kit":
@@ -235,28 +236,12 @@ def edit(kit_id=None, kit_data=None):
 
     return render_template('error.html', msg="If statements not working")
 
-    
+
 @app.route('/error', methods = ["GET"])
 def error(msg):
     return render_template('error.html', msg=msg)
-
-
-@app.route('/include_entry_form/, <kit>')
-def include_example(kit):
-	return render_template("includes_tutorial.html", kit=None)
-
+        
 
 @app.route("/success", methods=["GET", "POST"])
 def success(action, kit_data):
     return render_template("success.html", action=action, kit_data=kit_data)    
-    
-# CREATE TABLE gunpla(
-# id INTEGER PRIMARY KEY,
-# grade TEXT,
-# scale INTEGER,
-# name TEXT,
-# material TEXT,
-# condition TEXT,
-# notes TEXT
-# );
-
