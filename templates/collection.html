@@ -38,7 +38,7 @@
                     <td>{{ each['condition'] }}</td>
                     <td>{{ each['material'] }}</td>
                     <td>{{ each['notes'] }}</td>
-                    <td><a href ="{{ url_for('edit', kit_id=each['id']) }}"> edit / delete </a> </td>
+                    <td><a href ="{{ url_for('edit', kits = each, kit_id=each['id']) }}"> edit / delete </a> </td>
                 </tr>
             {% endfor %}
         </tbody>

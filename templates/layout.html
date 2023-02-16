@@ -20,6 +20,22 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
         <div id = "content">{% block content %} {% endblock %}</div>
+
+        {% if session['username'] %}
+            <hr>
+            <br>
+            <br>
+            <div name = "logged in">
+                You're logged in!
+            </div>
+            <br>
+            <br>
+            <a href="{{ url_for('logout') }}" class='btn btn-primary'>Log Out</a>
+
+            <hr>
+
+
+        {% endif %}
         
         <script src="" async defer></script>
     </body>

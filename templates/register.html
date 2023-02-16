@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block title %} REGISTER {% endblock %}
+{% block content %}
+
+Create a new account
+
+<form action="/register", method="POST">
+    <input type="text" name="username" placeholder="username here"><br>
+    <input type="text" name="password" placeholder="enter password"><br>
+    <input type="text" name="confirm" placeholder="confirm password"><br>
+    <input type="submit" name="submit">
+</form>
+
+<a href ="{{ url_for('login') }}"> or login to your existing account </a>
+
+{% endblock %}

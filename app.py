@@ -1,18 +1,58 @@
 import os
 from flask import Flask, flash, jsonify, redirect, render_template, request, session
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 import sqlite3
+from werkzeug.security import check_password_hash, generate_password_hash
 
+# for server-side session storage
 
 # sets up this file as main module, setting folders & files relative to it
 app = Flask(__name__, instance_relative_config=True)
-# con = sqlite3.connect("gunpla.db")  # accesses the DB, or implicitly creates it in DIR
+app.config['SECRET_KEY'] = "I buy too many models"
 
+ #instantiate the Login Manager
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+# con = sqlite3.connect("gunpla.db")  
  # threading issue when writing to db -- ask about it
  # isolation level = autocommit > on.  Ask about this, too
-conn = sqlite3.connect('gunpla.db', check_same_thread=False, isolation_level=None)
+conn = sqlite3.connect('gunpla.db', check_same_thread=False, isolation_level=None) # accesses the DB, or implicitly creates it in DIR
 conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
 cur = conn.cursor()
-#cur = con.cursor()  # set up cursor obj
+
+
+# User Class which also has properties of UserMixin (flask-login)
+class User(UserMixin):
+    def __init__(self, id, username, hash):
+        self.id = id
+        self.username = username
+        self.hash = hash
+    def __repr__(self):
+        return f"User(id={self.id}, username={self.username})"
+
+
+# User loader function for Flask-Login
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        conn = sqlite3.connect('gunpla.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE id=?", (user_id,))
+        user = c.fetchone()
+    except:
+        app.logger.info("cannot find username from load_user")
+        return None
+    finally:
+        c.close()
+    '''
+    creates a new instance of User class & return it. * is an UNPACKING OPERATOR, 
+    so takes value from 'user' tuple and sends it to the User class constructor.
+    '''
+    if user:
+        return User(*user)
+
 
 
 def has_error(inputs):
@@ -27,9 +67,6 @@ def has_error(inputs):
         
     name = inputs['name']
     scale = inputs['scale']
-    app.logger.info("has_error @ SCALE, %s", inputs['scale'])
-    app.logger.info("has_error @ type=SCALE, %s", type(inputs['scale']))
-    app.logger.info("has_error @ SCALE, %s", bool(inputs['scale']))
     notes = inputs['notes']
     condition = inputs['condition']
     grade = inputs['grade']
@@ -84,7 +121,11 @@ def has_error(inputs):
 
 
 def update_gunpla(action, kit_data=None, kit_id=None):
- 
+
+    if not session['user_id']:
+        app.logger.info("update_gunpla: error --- no user_id")
+        return 1
+
     if kit_data:
         name = str(kit_data['name'])
         scale = int(kit_data['scale'])
@@ -95,8 +136,8 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         app.logger.info("update gunpla - kit data confirmed")
 
     if action == "create":
-        cur.execute("INSERT INTO gunpla (name, scale , material, notes, condition, grade) VALUES (?, ?, ?, ?, ?, ?)", \
-            (name, scale, material, notes, condition, grade))
+        cur.execute("INSERT INTO gunpla (name, scale , material, notes, condition, grade, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)", \
+            (name, scale, material, notes, condition, grade, session['user_id']))
         return 0 
 
     elif action == "update" or action == "edit":
@@ -142,13 +183,13 @@ def utility_functions():
 @app.route("/", methods=["GET", "POST"])
 def index():
 
+    if not session.get('username'):
+        return render_template('login.html')
+
     if request.method == 'GET':
-        app.logger.info('%s INDEX: GET invoked')
         return render_template('index.html')
 
-    if request.method == "POST":
-        app.logger.info('%s INDEX: POST invoked')
-        
+    if request.method == 'POST':        
         condition = request.form.get("condition")
         grade = request.form.get("grade")
         name = request.form.get("name")
@@ -175,15 +216,20 @@ def index():
         return render_template("success.html", action="add", kit_data=kit_data)
 
 
-@app.route('/collection/<kits>', methods=["GET", "POST"])
+@app.route('/collection, <kits>', methods=["GET", "POST"])
+@login_required
 def collection(kits):
-    cur.execute ("SELECT * FROM gunpla ORDER BY id ASC")
+
+    conn = sqlite3.connect('gunpla.db')
+    conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
+    cur = conn.cursor()
+    cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
     rows = cur.fetchall()
-    print("Hello world")
     return render_template('collection.html', kits=rows)
 
 
 @app.route('/edit/<kit_id>', methods=["GET", "POST"])
+@login_required
 def edit(kit_id=None):
 
     if request.method == "GET":        
@@ -240,7 +286,127 @@ def edit(kit_id=None):
 @app.route('/error', methods = ["GET"])
 def error(msg):
     return render_template('error.html', msg=msg)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+
+        # Ensure username was submitted
+        if not request.form.get("username"):
+            return render_template('error.html', msg="must provide username")
+        # Ensure password was submitted
+        elif not request.form.get("password"):
+            return render_template('error.html', msg="must provide password")
+
+        password = request.form.get('password')
+        username = request.form.get('username')
+
+        # check USERNAME
+        conn = sqlite3.connect('gunpla.db')
+        conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+        rows = cur.fetchone()
+        conn.close()
+
+        if rows is None:
+            return render_template('error.html', msg="username is wrong!")
+
+        # check PW
+        if not check_password_hash(rows[2], password):
+            return render_template('error.html', msg="Password error!")
+
+        # Checks Passed. Remember which user has logged in
+        session['user_id'] = rows['id']
+        username = session['username'] = rows['username']
+        password = rows['hash']
+        user = User(id=session['user_id'],username=username,hash=hash)
+        try:
+            login_user(user)
+            app.logger.info("Login OK")
+        except:
+            app.logger.info("Login NOT OK")
+
+        # Redirect user to home page
+        return redirect("/")
+
+    # GET request
+    else:
+        return render_template('login.html')
+
+
+@app.route("/logout")
+def logout():
+    conn = sqlite3.connect('gunpla.db')
+    session.clear()
+    logout_user()
+    # Redirect user to login form
+    return redirect("/")
+
+
+@app.route('/register', methods = ['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        pwconfirm = request.form.get('confirm')
+
+        if not username or len(username) < 1:
+            return render_template('error.html', msg="Username is too short!")
+        elif not password or len(password) < 1:
+            return render_template ('error.html', msg="Password is too short!")
+        elif not pwconfirm or len(pwconfirm) < 1:
+            return render_template ('error.html', msg="Check your confirm-password fields")
+        elif not pwconfirm == password:
+            return render_template('error.html', msg="Password needs to match confirm")
+
+        # check for existing Username  
+        conn = sqlite3.connect('gunpla.db')
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+        rows = cur.fetchall()
+        if len(rows) > 0:
+            return render_template('error.html', msg="Error: username taken!")
         
+        # hash pw and store new User
+        hashed_pw = generate_password_hash(password)
+        app.logger.info("creating User . . .!")
+        cur.execute("INSERT INTO users (username, hash) VALUES (?, ?)", (username, hashed_pw))
+        app.logger.info("user created!")
+        conn.commit()
+
+        session['username'] = username # store it for later use in app
+        cur.execute("SELECT id FROM users WHERE username = ?", (username,))
+        rows = cur.fetchone()
+        session['user_id'] = rows['id']
+
+
+        conn.close()      
+        return render_template('index.html')
+   
+    return render_template('register.html')
+
+
+@app.route('/chammy', methods = ["GET", "POST"])
+def show():
+    d = {
+        'name': 'Chammy',
+        'birthday': 'June 25',
+        'age': 3,
+        'food': 'blueberry',
+        'color': 'pink'
+    }
+    app.logger.info (type(d))
+    return d
+
+
+@app.route('/jsonv/<v>', methods = ["GET", "POST"])
+def showv(v):
+    msg = "This is the message: " + v
+    message_dict = {'message': msg}
+    return jsonify(message_dict)
+
 
 @app.route("/success", methods=["GET", "POST"])
 def success(action, kit_data):
