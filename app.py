@@ -1,6 +1,6 @@
 import os
 from flask import Flask, flash, jsonify, redirect, render_template, request, session
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -13,7 +13,6 @@ app.config['SECRET_KEY'] = "I buy too many models"
  #instantiate the Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
-
 
 # con = sqlite3.connect("gunpla.db")  
  # threading issue when writing to db -- ask about it
@@ -33,7 +32,7 @@ class User(UserMixin):
         return f"User(id={self.id}, username={self.username})"
 
 
-# User loader function for Flask-Login
+# load User by ID; will return None if doesn't exist
 @login_manager.user_loader
 def load_user(user_id):
     try:
@@ -53,6 +52,45 @@ def load_user(user_id):
     if user:
         return User(*user)
 
+
+def check_for_json(req):
+    if not request.is_json:
+        error_message = {'Error: JSON format is needd.'}
+        return jsonify(error_message), 400
+    return 0
+
+
+def check_login(username, password):
+        # check USERNAME
+        conn = sqlite3.connect('gunpla.db')
+        conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+        rows = cur.fetchone()
+        conn.close()
+
+        if rows is None:
+            return "Username invalid"
+
+        # check PW
+        if not check_password_hash(rows[2], password):
+            return "Passord invalid"
+
+        # Checks Passed. Remember which user has logged in
+        session['user_id'] = rows['id']
+        username = session['username'] = rows['username']
+        password = rows['hash']
+        app.logger.info("session @ User_id: %s", session['user_id'],)
+        user = User(id=session['user_id'],username=username,hash=hash)
+        app.logger.info(" user == %s", user)
+
+        if login_user(user) == True:
+            app.logger.info("88: login_user successful")
+        else:
+            app.logger.info("90: login_user failed")
+
+        app.logger.info("current_user %s", current_user)
+        app.logger.info("current_user if logged-in?: %s", current_user.is_authenticated)
 
 
 def has_error(inputs):
@@ -274,7 +312,6 @@ def edit(kit_id=None):
 
             if has_error_result == 0:
                 kit_data = kit_vals
-
                 update_gunpla(kit_data=kit_data, action="update", kit_id = kit_id) 
                 return render_template("success.html", action="add", kit_data=kit_data)        
             else:
@@ -321,12 +358,15 @@ def login():
         session['user_id'] = rows['id']
         username = session['username'] = rows['username']
         password = rows['hash']
+        app.logger.info("session @ user_id = %s", session['user_id'])
+        app.logger.info("testing")
+
         user = User(id=session['user_id'],username=username,hash=hash)
         try:
             login_user(user)
-            app.logger.info("Login OK")
+            app.logger.info("Login OK - 365")
         except:
-            app.logger.info("Login NOT OK")
+            app.logger.info("Login NOT OK line 369")
 
         # Redirect user to home page
         return redirect("/")
@@ -381,33 +421,81 @@ def register():
         rows = cur.fetchone()
         session['user_id'] = rows['id']
 
-
         conn.close()      
         return render_template('index.html')
    
     return render_template('register.html')
 
 
-@app.route('/chammy', methods = ["GET", "POST"])
+@app.route('/api/logout', methods = ['POST'])
+@login_required
+def api_logout():
+    logout_user()
+    session.clear()
+    username = session.get('username')
+    app.logger.info('logged-out Username: %s', username)
+    return jsonify({'message': "Successfully logged out."}, 200)
+
+
+
+@app.route('/api/login', methods = ['GET', 'POST'])
+def api_login():
+
+    if request.method == 'GET':
+        # app.logger.info("GET method")
+
+        if 'username' in session:
+            return jsonify({'message': 'You are logged in!'}), 200
+        else:
+            return jsonify({'error': 'You are not logged in yet'}), 200
+
+
+    if request.method == 'POST':
+        app.logger.info("api_login route: `POST`:")
+        data = request.get_json()
+        username = data['username']
+        password = data['password']
+        
+        # verify the username and password
+        login_error = check_login(username=username, password=password)
+
+        # problem
+        if login_error == True:
+            app.logger.info("login error: %s", login_error)
+            return jsonify({'error': login_error}), 401
+
+        if current_user.is_authenticated == True:
+            app.logger.info("`current user` is authenticated! %s", current_user)
+            app.logger.info("username is: %s ", session['username'])
+            messaging = {}
+            messaging['message'] = "API login successful."
+            return jsonify(messaging), 200
+
+        else:
+            app.logger.info("no`login_user`")
+            return jsonify({'error':"login attempt failed"}), 401
+
+
+@app.route('/api/chammy', methods = ["GET", "POST"])
 def show():
-    d = {
+    chammy_data = {
         'name': 'Chammy',
         'birthday': 'June 25',
         'age': 3,
         'food': 'blueberry',
         'color': 'pink'
     }
-    app.logger.info (type(d))
-    return d
+    return jsonify(chammy_data), 400
 
 
-@app.route('/jsonv/<v>', methods = ["GET", "POST"])
-def showv(v):
-    msg = "This is the message: " + v
+@app.route('/api/jsonv/', methods = ["GET", "POST"])
+@login_required
+def showv(v="Whatever"):
+    msg = "Piew piew "
     message_dict = {'message': msg}
     return jsonify(message_dict)
 
 
-@app.route("/success", methods=["GET", "POST"])
+@app.route('/success', methods=["GET", "POST"])
 def success(action, kit_data):
     return render_template("success.html", action=action, kit_data=kit_data)    

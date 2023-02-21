@@ -4,45 +4,56 @@
 
 {% block content %}
 
+<div class="container">
 
-<h1>Here are your kits</h1>
-<br>
-<br>
+    <h1>Here are your kits</h1>
+    <br>
+    <br>
 
-<div id="kit-table">
-    <table border="2">
-        <thead>
-            <tr>
-                <th>id</th>
-                <th>scale</th>
-                <th>grade</th>
-                <th>name</th>
-                <th>condition</th>
-                <th>material</th>
-                <th>notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for each in kits %}
+    <div id="kit-table">
+        <table border="2" class="table table-striped table-responsive-sm ">
+            <thead class="table-info table-group-divider">
                 <tr>
-                    <td>{{ each['id'] }}</td>
-                    <td>{{ each['scale'] }}</td>
-                    {% if each['grade'] == None %}
-                        {% set upr = 'N/A' %}
-                    {% else %}
-                        {% set upr = each['grade'] %}
-                        {% set upr = upr.upper() %}
-                    {% endif %}
-                    <td>{{ upr }}</td>
-                    <td>{{ each['name'] }}</td>
-                    <td>{{ each['condition'] }}</td>
-                    <td>{{ each['material'] }}</td>
-                    <td>{{ each['notes'] }}</td>
-                    <td><a href ="{{ url_for('edit', kits = each, kit_id=each['id']) }}"> edit / delete </a> </td>
+                    <th>id</th>
+                    <th>scale</th>
+                    <th>grade</th>
+                    <th>name</th>
+                    <th>condition</th>
+                    <th>material</th>
+                    <th>notes</th>
+                    <th>edit/delete</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            {% set counter = 0 %}
+            <tbody>
+                {% for each in kits %}
+                {% set counter = counter + 1 %}
+                {% if counter %2 %}
+                    <tr class="table-warning">
+                {% else %}
+                    <tr>
+                {% endif %}                        
+                        <td>{{ each['id'] }}</td>
+                        <td>{{ each['scale'] }}</td>
+                        {% if each['grade'] == None %}
+                            {% set grade_upper = 'N/A' %}
+                        {% else %}
+                            {% set grade_upper = each['grade'] %}
+                            {% set grade_upper = grade_upper.upper() %}
+                        {% endif %}
+                        <td>{{ grade_upper }}</td>
+                        <td>{{ each['name'] }}</td>
+                        <td>{{ each['condition'] }}</td>
+                        <td>{{ each['material'] }}</td>
+                        <td>{{ each['notes'] }}</td>
+                        {% set kit_id_val = each['id'] %}
+
+                        <td><a href ="{{ url_for('edit', kit_id = kit_id_val) }}"> edit / delete </a> </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 {% endblock %}

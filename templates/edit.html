@@ -4,46 +4,21 @@
 
 {% block content %}
 
+<div class="div container">
 
-<h1>Editing:  this is the kit's current info:</h1>
+    <div class="py-4">
+        <span class="display-5">Editing: </span>
+        <span class="display-3">{{ kit_data['name'] }}</span>
+    </div>
 
-<div>
-    <table border="2">
-        <thead>
-            <tr>
-                <th>SCALE</th>
-                <th>GRADE</th>
-                <th>NAME</th>
-                <th>NOTES</th>
-                <th>MATERIAL</th>
-                <th>CONDITION</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>{{ kit_data['scale'] }}</td>
-                <td>{{ kit_data['grade'] }}</td>
-                <td><strong>{{ kit_data['name'] }}</strong></td>
-                <td>{{ kit_data['notes'] }}</td>
-                <td>{{ kit_data['material'] }}</td>
-                <td>{{ kit_data['condition'] }}</td>
-            </tr>
-        </tbody>
-    </table>
+    <form action="{{ url_for('edit', kit_id=kit_id, kit_data=kit_data) }}", method ='POST'>
+
+        {% include 'includes_form.html' %}
+
+    </form>
 </div>
 
-
-<form action="{{ url_for('edit', kit_id=kit_id, kit_data=kit_data) }}", method ='POST'>
-
-    {% include 'includes_entry_form.html' %}
-
-    Confirm Edit:
-    <input name="choice" type="submit" value="Update Kit"/>
-
-    Confirm Deleting:
-    <input name="choice" type="submit" value="Delete Kit"/>
-</form>
-
-
 {% endblock %}
+
+
 

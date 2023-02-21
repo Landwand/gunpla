@@ -3,17 +3,14 @@
 {% block content %}
 
 
-<h1>Kit Inventory</h1>
-<br> Enter a kit.
-
-<br>
+<h1 class="display-3 py-2">Kit Inventory</h1>
+<p class="class fs-4 text-muted">Add a kit into your collection</p>
 <br>
 
 <form action="/", method="POST">
 
-
-    <label for="scale" id="scale">SCALE: 1/</label>
-    <input list="scales" type = "number" name="scale" placeholder="choose or enter" autocomplete="off">
+    <label for="scale" id="scale" class="form-label">SCALE</label>
+    <input list="scales" type = "number" name="scale" placeholder="Enter Scale" autocomplete="off" class="form-control">
     <datalist id="scales">
       <option data-value="144">144</option>
       <option data-value="100">100</option>
@@ -23,10 +20,11 @@
       <option data-value="6">6</option>
       <option data-value="1000">1000</option>
     </datalist>
+    
     <br>
 
-    <label for="grade">GRADE: </label>
-    <select name="grade" placeholder="choose grade">
+    <label for="grade" class="form-label">GRADE</label>
+    <select name="grade" class="form-select" placeholder="choose grade" aria-label="model kit grade">
         <option value=""> </option>
         <option value="hg">HG</option>
         <option value="mg">MG</option>
@@ -34,31 +32,44 @@
         <option value="eg">EG</option>
         <option value="rg">RG</option>
         <option value="pg">PG</option>
-    </select><br>
+    </select>
+    
+    <br>
 
-    <input type="text" name="name" placeholder="Kit Name"><br>
-    <label for="material">Material: </label>
-    <select name="material">
+    <label for="name" class="form-label">Kit Name</label>
+    <input type="text" class="form-control" name="name" placeholder="Enter Kit Name">
+    
+    <br>
+
+    <label for="material" class="form-label">Material</label>
+    <select name="material" class="form-select">
         <option value="plastic">plastic</option>
         <option value="resin">resin</option>
         <option value="other">other</option>
-    </select><br>
+    </select>
+    
+    <br>
 
-    <label for="condition">Condition</label>
-    <select name="condition">
+    <label for="condition" class="form-label">Condition</label>
+    <select name="condition" class="form-select">
         <option value="new">New</option>
         <option value="snapped">Snapped</option>
         <option value="progress">Progress</option>
         <option value="done">Done</option>
-    </select><br>
-    <input type="text" name="notes" size="40" placeholder="extra notes here">
+    </select>
     
+    <br>
+
+    <label for="notes" class="form-label">Misc Notes</label>
+    <input type="text" class="form-control" name="notes" placeholder="Enter notes">
 
     <br>
     <br>
     <input type="submit" name="submit">
 
 </form>
+
+<!-- </div> -->
 
 
 </table>
