@@ -1,13 +1,14 @@
 import os
-from flask import Flask, flash, jsonify, redirect, render_template, request, session
+from flask import Flask, jsonify, redirect, render_template, request, session, make_response, Response #, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 
-# for server-side session storage
 
-# sets up this file as main module, setting folders & files relative to it
-app = Flask(__name__, instance_relative_config=True)
+'''To run this app, just use the script `./run_flask.sh`'''
+
+
+app = Flask(__name__, instance_relative_config=True) # config file below is relative to app file
 app.config['SECRET_KEY'] = "I buy too many models"
 
  #instantiate the Login Manager
@@ -15,7 +16,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 # con = sqlite3.connect("gunpla.db")  
- # threading issue when writing to db -- ask about it
+ # threading issue if above; make a function to close connection or use 'g' Obj
  # isolation level = autocommit > on.  Ask about this, too
 conn = sqlite3.connect('gunpla.db', check_same_thread=False, isolation_level=None) # accesses the DB, or implicitly creates it in DIR
 conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
@@ -35,6 +36,8 @@ class User(UserMixin):
 # load User by ID; will return None if doesn't exist
 @login_manager.user_loader
 def load_user(user_id):
+    c = None # initialize c None, preventing Unbound Variable 
+
     try:
         conn = sqlite3.connect('gunpla.db')
         c = conn.cursor()
@@ -44,7 +47,9 @@ def load_user(user_id):
         app.logger.info("cannot find username from load_user")
         return None
     finally:
-        c.close()
+        if c is not None:
+            c.close()
+
     '''
     creates a new instance of User class & return it. * is an UNPACKING OPERATOR, 
     so takes value from 'user' tuple and sends it to the User class constructor.
@@ -55,7 +60,7 @@ def load_user(user_id):
 
 def check_for_json(req):
     if not request.is_json:
-        error_message = {'Error: JSON format is needd.'}
+        error_message = {'Error: JSON format is needed.'}
         return jsonify(error_message), 400
     return 0
 
@@ -74,7 +79,7 @@ def check_login(username, password):
 
         # check PW
         if not check_password_hash(rows[2], password):
-            return "Passord invalid"
+            return "Password invalid"
 
         # Checks Passed. Remember which user has logged in
         session['user_id'] = rows['id']
@@ -94,7 +99,6 @@ def check_login(username, password):
 
 
 def has_error(inputs):
-
     app.logger.info("check_inputs started")
     app.logger.info("inputs %s", inputs)
 
@@ -139,16 +143,18 @@ def has_error(inputs):
             case "pg":
                 scale = 60
             case _:
-                scale = None        
-    try:
-        if int(scale) < 1:
+                scale = None
+
+    if scale:       
+        try:
+            if int(scale) < 1:
+                check_value = 1
+                msg = "scale too small"
+                return check_value, msg, kit_vals
+        except:
+            msg = "ERROR: 'Scale' not a valid number!"
             check_value = 1
-            msg = "scale too small"
             return check_value, msg, kit_vals
-    except:
-        msg = "ERROR: 'Scale' not a valid number!"
-        check_value = 1
-        return check_value, msg, kit_vals
 
     # save corrected form inputs to kit_vals and prep to return
     kit_vals = {}
@@ -159,7 +165,6 @@ def has_error(inputs):
 
 
 def update_gunpla(action, kit_data=None, kit_id=None):
-
     if not session['user_id']:
         app.logger.info("update_gunpla: error --- no user_id")
         return 1
@@ -173,25 +178,30 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         material = str(kit_data['material'])
         app.logger.info("update gunpla - kit data confirmed")
 
-    if action == "create":
-        cur.execute("INSERT INTO gunpla (name, scale , material, notes, condition, grade, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)", \
-            (name, scale, material, notes, condition, grade, session['user_id']))
-        return 0 
+        if action == "create":
+            cur.execute("INSERT INTO gunpla (name, scale , material, notes, condition, grade, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)", \
+                (name, scale, material, notes, condition, grade, session['user_id']))
+            return 0 
 
-    elif action == "update" or action == "edit":
-        cur.execute("UPDATE gunpla SET name = ?, scale = ?, material = ?, notes = ?, condition = ?, grade = ? WHERE id = ?", (name, scale, material, notes, condition, grade, kit_id))               
-        app.logger.info("FUNC: update_gunpla EDIT now completed!!!!! %s")
-        conn.commit()
-        return 0
+        elif action == "update" or action == "edit":
+            cur.execute("UPDATE gunpla SET name = ?, scale = ?, material = ?, notes = ?, condition = ?, grade = ? WHERE id = ?", (name, scale, material, notes, condition, grade, kit_id))               
+            app.logger.info("FUNC: update_gunpla EDIT now completed!!!!! %s")
+            conn.commit()
+            return 0
 
-    elif action == "delete":
-        cur.execute("DELETE FROM gunpla WHERE id = ?", (kit_id,))
-        return 0
+        elif action == "delete":
+            cur.execute("DELETE FROM gunpla WHERE id = ?", (kit_id,))
+            return 0
 
+        else:
+            print("Unknown input - update_gunpla in error")
+            app.logger.info("Unknown input - update_gunpla in error")
+            return 1 # error
+        
     else:
-        print("Unknown input - update_gunpla in error")
-        app.logger.info("Unknown input - update_gunpla in error")
-        return 1 # error
+        message = jsonify({'error' : 'no kit data found'})
+        return make_response(message, 400)
+
 
 
 # no caching of request responses into browser to ensure accuracy when building/troubleshooting
@@ -220,7 +230,6 @@ def utility_functions():
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-
     if not session.get('username'):
         return render_template('login.html')
 
@@ -257,7 +266,6 @@ def index():
 @app.route('/collection, <kits>', methods=["GET", "POST"])
 @login_required
 def collection(kits):
-
     conn = sqlite3.connect('gunpla.db')
     conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
     cur = conn.cursor()
@@ -269,7 +277,6 @@ def collection(kits):
 @app.route('/edit/<kit_id>', methods=["GET", "POST"])
 @login_required
 def edit(kit_id=None):
-
     if request.method == "GET":        
         # GET request
         print("Edit page loaded in GET mode")
@@ -437,43 +444,50 @@ def api_logout():
     return jsonify({'message': "Successfully logged out."}, 200)
 
 
-
 @app.route('/api/login', methods = ['GET', 'POST'])
-def api_login():
-
+def api_login() -> Response :# type: ignore
     if request.method == 'GET':
-        # app.logger.info("GET method")
-
         if 'username' in session:
-            return jsonify({'message': 'You are logged in!'}), 200
+            username = session.get('username')
+            '''
+            TYPE warning being surpressed. I cannot figure out why.
+            '''
+            message = jsonify({'message': f'You are already logged in as: {username}'})
+            return make_response(message, 200)
         else:
-            return jsonify({'error': 'You are not logged in yet'}), 200
-
+            message = jsonify({'error': 'You are not logged in yet'})
+            return make_response(message, 401)
 
     if request.method == 'POST':
         app.logger.info("api_login route: `POST`:")
-        data = request.get_json()
-        username = data['username']
-        password = data['password']
+
+        try:
+            data = request.get_json()
+            username = data['username']
+            password = data['password']
+            
+            # verify the username and password
+            login_error = check_login(username=username, password=password)
+
+            # problem
+            if login_error == True:
+                app.logger.info("login error: %s", login_error)
+                message = jsonify({'error': login_error})
+                return make_response(message, 401)
+            if current_user.is_authenticated == True:
+                app.logger.info("`current user` is authenticated! %s", current_user)
+                app.logger.info("username is: %s ", session['username'])
+                message = jsonify({'message' : 'Login successful'})
+                return make_response(message, 200)
+            else:
+                app.logger.info("no`login_user`")
+                message = jsonify({'error': "login attempt failed"})
+                return make_response(message, 401)
+        except:
+            message = jsonify({'error': 'login failed. Username and/or Password data issue'})
+            return make_response(message, 401)
         
-        # verify the username and password
-        login_error = check_login(username=username, password=password)
 
-        # problem
-        if login_error == True:
-            app.logger.info("login error: %s", login_error)
-            return jsonify({'error': login_error}), 401
-
-        if current_user.is_authenticated == True:
-            app.logger.info("`current user` is authenticated! %s", current_user)
-            app.logger.info("username is: %s ", session['username'])
-            messaging = {}
-            messaging['message'] = "API login successful."
-            return jsonify(messaging), 200
-
-        else:
-            app.logger.info("no`login_user`")
-            return jsonify({'error':"login attempt failed"}), 401
 
 
 @app.route('/api/chammy', methods = ["GET", "POST"])
@@ -488,10 +502,10 @@ def show():
     return jsonify(chammy_data), 400
 
 
-@app.route('/api/jsonv/', methods = ["GET", "POST"])
+@app.route('/api/gandamu/', methods = ["GET", "POST"])
 @login_required
-def showv(v="Whatever"):
-    msg = "Piew piew "
+def fire(v="Whatever"):
+    msg = "You're logged in, so: Piew! Piew! "
     message_dict = {'message': msg}
     return jsonify(message_dict)
 
