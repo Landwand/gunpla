@@ -36,7 +36,7 @@ class User(UserMixin):
 # load User by ID; will return None if doesn't exist
 @login_manager.user_loader
 def load_user(user_id):
-    c = None # initialize c None, preventing Unbound Variable 
+    c = None # initialize c -> None, preventing Unbound Variable 
 
     try:
         conn = sqlite3.connect('gunpla.db')
@@ -103,7 +103,7 @@ def has_error(inputs):
     app.logger.info("inputs %s", inputs)
 
     #initilize return values
-    check_value = 0 # 1 in case-of error
+    is_error = 0 # 1 in case-of error
     msg = "good"
     kit_vals = inputs
         
@@ -117,8 +117,8 @@ def has_error(inputs):
     if len(name) < 1:
         msg = "name too short"
         app.logger.info(msg)
-        check_value = 1 # error
-        return check_value, msg, kit_vals  
+        is_error = 1 # error
+        return is_error, msg, kit_vals  
     if not condition:
         condition = 'new'
     if not grade:
@@ -148,20 +148,20 @@ def has_error(inputs):
     if scale:       
         try:
             if int(scale) < 1:
-                check_value = 1
+                is_error = 1
                 msg = "scale too small"
-                return check_value, msg, kit_vals
+                return is_error, msg, kit_vals
         except:
             msg = "ERROR: 'Scale' not a valid number!"
-            check_value = 1
-            return check_value, msg, kit_vals
+            is_error = 1
+            return is_error, msg, kit_vals
 
     # save corrected form inputs to kit_vals and prep to return
     kit_vals = {}
     for variable in ["name", "scale", "grade", "condition", "material", "notes"]:
         kit_vals[variable] = eval(variable)
     # check_value: 0 = good, 1 = error
-    return check_value, msg, kit_vals
+    return is_error, msg, kit_vals
 
 
 def update_gunpla(action, kit_data=None, kit_id=None):
@@ -203,7 +203,6 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         return make_response(message, 400)
 
 
-
 # no caching of request responses into browser to ensure accuracy when building/troubleshooting
 @app.after_request
 def after_request(response):
@@ -224,11 +223,10 @@ To use (print to Terminal)
 def utility_functions():
     def print_in_console(message):
         print(str(message))
-        #print (str(type(message)), "is the type")  # prints the type
     return dict(mdebug=print_in_console)
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"]) # type: ignore
 def index():
     if not session.get('username'):
         return render_template('login.html')
@@ -263,7 +261,7 @@ def index():
         return render_template("success.html", action="add", kit_data=kit_data)
 
 
-@app.route('/collection, <kits>', methods=["GET", "POST"])
+@app.route('/collection/<kits>', methods=["GET", "POST"])
 @login_required
 def collection(kits):
     conn = sqlite3.connect('gunpla.db')
@@ -271,6 +269,7 @@ def collection(kits):
     cur = conn.cursor()
     cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
     rows = cur.fetchall()
+    conn.close()
     return render_template('collection.html', kits=rows)
 
 
@@ -335,14 +334,13 @@ def error(msg):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-
         # Ensure username was submitted
         if not request.form.get("username"):
             return render_template('error.html', msg="must provide username")
         # Ensure password was submitted
         elif not request.form.get("password"):
             return render_template('error.html', msg="must provide password")
-
+        
         password = request.form.get('password')
         username = request.form.get('username')
 
@@ -355,7 +353,7 @@ def login():
         conn.close()
 
         if rows is None:
-            return render_template('error.html', msg="username is wrong!")
+            return render_template('error.html', msg="username does not exist!")
 
         # check PW
         if not check_password_hash(rows[2], password):
@@ -365,15 +363,13 @@ def login():
         session['user_id'] = rows['id']
         username = session['username'] = rows['username']
         password = rows['hash']
-        app.logger.info("session @ user_id = %s", session['user_id'])
-        app.logger.info("testing")
 
         user = User(id=session['user_id'],username=username,hash=hash)
         try:
             login_user(user)
-            app.logger.info("Login OK - 365")
+            app.logger.info("login User OK")
         except:
-            app.logger.info("Login NOT OK line 369")
+            app.logger.info("login User - FAILED")
 
         # Redirect user to home page
         return redirect("/")
@@ -388,6 +384,7 @@ def logout():
     conn = sqlite3.connect('gunpla.db')
     session.clear()
     logout_user()
+    conn.close()
     # Redirect user to login form
     return redirect("/")
 
