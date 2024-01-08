@@ -313,7 +313,6 @@ def edit(kit_id=None):
 
         if request.form.get("choice") == "Update Kit":
             app.logger.info("%s EDIT/ update kit*******, ", kit_id)
-
             has_error_result, msg, kit_vals = has_error(kit_data)
 
             if has_error_result == 0:
@@ -373,7 +372,6 @@ def login():
 
         # Redirect user to home page
         return redirect("/")
-
     # GET request
     else:
         return render_template('login.html')
@@ -387,6 +385,11 @@ def logout():
     conn.close()
     # Redirect user to login form
     return redirect("/")
+
+
+@app.route('/success', methods=["GET", "POST"])
+def success(action, kit_data):
+    return render_template("success.html", action=action, kit_data=kit_data)    
 
 
 @app.route('/register', methods = ['GET', 'POST'])
@@ -442,7 +445,7 @@ def api_logout():
 
 
 @app.route('/api/login', methods = ['GET', 'POST'])
-def api_login() -> Response :# type: ignore
+def api_login() -> Response : # type: ignore
     if request.method == 'GET':
         if 'username' in session:
             username = session.get('username')
@@ -485,8 +488,6 @@ def api_login() -> Response :# type: ignore
             return make_response(message, 401)
         
 
-
-
 @app.route('/api/chammy', methods = ["GET", "POST"])
 def show():
     chammy_data = {
@@ -507,6 +508,7 @@ def fire(v="Whatever"):
     return jsonify(message_dict)
 
 
-@app.route('/success', methods=["GET", "POST"])
-def success(action, kit_data):
-    return render_template("success.html", action=action, kit_data=kit_data)    
+@app.route('/edit/<kit_id>', methods = ["GET", "POST"]) # type: ignore
+@login_required
+def api_edit(kit_id=None):
+    pass
