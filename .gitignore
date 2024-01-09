@@ -1,2 +1,8 @@
 test_update_gunpla.py
 wip.py
+modify_db.py
+test.py
+__pycache__/app.cpython-311.pyc
+__pycache__/gunpla.cpython-311.pyc
+gunpla-env/
+gunpla/.DS_Store

@@ -10,17 +10,34 @@
         <title></title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="/static/styles.css">
+        <!-- <link rel="stylesheet" href="/static/styles.css"> -->
         <title>Gunpla Tracker Page: {% block title %} {% endblock %}</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.0/css/bootstrap.min.css" integrity="sha256-/ykJw/wDxMa0AQhHDYfuMEwVb4JHMx9h4jD4XvHqVzU=" crossorigin="anonymous" />
-
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        </style>
     </head>
+
+    
     <body>
-        <!--[if lt IE 7]>
+        <!-- [if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
-        <![endif]-->
-        <div id = "content">{% block content %} {% endblock %}</div>
-        
-        <script src="" async defer></script>
+        <![endif] -->
+
+        <div name="entire-screen" class="container-xl border my-5 bg-light bg-gradient">
+            <div class="row">
+
+                <div name="current-contents" class="col-sm-8 col-lg-10 border">
+                    {% block content %} {% endblock %}
+                </div>
+
+                <div name="nav-menu" class="col-sm-8 col-lg-2 border">
+                    {% include 'includes_navbar.html' %}
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js" integrity="sha384-mQ93GR66B00ZXjt0YO5KlohRA5SY2XofN4zfuZxLkoj1gXtW8ANNCe9d5Y3eG5eD" crossorigin="anonymous" async defer></script>
+
+
+
     </body>
 </html>
