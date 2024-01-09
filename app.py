@@ -4,9 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 
-
 '''To run this app, just use the script `./run_flask.sh`'''
-
 
 app = Flask(__name__, instance_relative_config=True) # config file below is relative to app file
 app.config['SECRET_KEY'] = "I buy too many models"
@@ -90,9 +88,9 @@ def check_login(username, password):
         app.logger.info(" user == %s", user)
 
         if login_user(user) == True:
-            app.logger.info("88: login_user successful")
+            app.logger.info("login_user successful")
         else:
-            app.logger.info("90: login_user failed")
+            app.logger.info("login_user failed")
 
         app.logger.info("current_user %s", current_user)
         app.logger.info("current_user if logged-in?: %s", current_user.is_authenticated)
@@ -160,7 +158,6 @@ def has_error(inputs):
     kit_vals = {}
     for variable in ["name", "scale", "grade", "condition", "material", "notes"]:
         kit_vals[variable] = eval(variable)
-    # check_value: 0 = good, 1 = error
     return is_error, msg, kit_vals
 
 
@@ -202,7 +199,6 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         message = jsonify({'error' : 'no kit data found'})
         return make_response(message, 400)
 
-
 # no caching of request responses into browser to ensure accuracy when building/troubleshooting
 @app.after_request
 def after_request(response):
@@ -228,6 +224,8 @@ def utility_functions():
 
 @app.route("/", methods=["GET", "POST"]) # type: ignore
 def index():
+    app.logger.info("%s Index Page loaded ")
+
     if not session.get('username'):
         return render_template('login.html')
 
@@ -261,9 +259,10 @@ def index():
         return render_template("success.html", action="add", kit_data=kit_data)
 
 
-@app.route('/collection/<kits>', methods=["GET", "POST"])
+@app.route('/collection/', methods=["GET", "POST"])
 @login_required
 def collection(kits):
+    app.logger.info("%s Collection Page loaded ")
     conn = sqlite3.connect('gunpla.db')
     conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
     cur = conn.cursor()
@@ -467,12 +466,12 @@ def api_login() -> Response : # type: ignore
             password = data['password']
             
             # verify the username and password
-            login_error = check_login(username=username, password=password)
+            login_error_message = check_login(username=username, password=password)
 
             # problem
-            if login_error == True:
-                app.logger.info("login error: %s", login_error)
-                message = jsonify({'error': login_error})
+            if login_error_message == True:
+                app.logger.info("login error: %s", login_error_message)
+                message = jsonify({'error': login_error_message})
                 return make_response(message, 401)
             if current_user.is_authenticated == True:
                 app.logger.info("`current user` is authenticated! %s", current_user)
@@ -495,7 +494,8 @@ def show():
         'birthday': 'June 25',
         'age': 3,
         'food': 'blueberry',
-        'color': 'pink'
+        'color': 'pink',
+        'message': "Chammy wants everyone to know her, so you don't need to be logged in"
     }
     return jsonify(chammy_data), 400
 
@@ -508,7 +508,7 @@ def fire(v="Whatever"):
     return jsonify(message_dict)
 
 
-@app.route('/edit/<kit_id>', methods = ["GET", "POST"]) # type: ignore
+@app.route('api/update/<kit_id>', methods = ["GET", "POST"]) # type: ignore
 @login_required
 def api_edit(kit_id=None):
     pass
