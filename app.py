@@ -91,6 +91,15 @@ def check_login(username, password):
         app.logger.info("current_user if logged-in?: %s", current_user.is_authenticated)
 
 
+def db_get_kits():
+    conn = sqlite3.connect('gunpla.db')
+    conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
+    cur = conn.cursor()
+    cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
+    rows = cur.fetchall()
+    return rows
+
+
 def has_error(inputs):
     app.logger.info("%s has_error started")
 
@@ -251,15 +260,16 @@ def index():
         return render_template("success.html", action="add", kit_data=kit_data)
 
 
-@app.route('/collection, <kits>', methods=["GET", "POST"])
+@app.route("/collection, <kits>", methods=["GET", "POST"])
 @login_required
 def collection(kits):
-
-    conn = sqlite3.connect('gunpla.db')
-    conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
-    cur = conn.cursor()
-    cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
-    rows = cur.fetchall()
+    app.logger.info("%s collection route started")
+    # conn = sqlite3.connect('gunpla.db')
+    # conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
+    # cur = conn.cursor()
+    # cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
+    # rows = cur.fetchall()
+    rows = db_get_kits()
     return render_template('collection.html', kits=rows)
 
 
@@ -435,7 +445,6 @@ def api_logout():
 
 
 @app.route('/api/login', methods = ['GET', 'POST'])
-
 def api_login():
     if request.method == 'GET':
         # app.logger.info("GET method")
@@ -482,6 +491,14 @@ def show():
     }
     return jsonify(chammy_data), 400
 
+
+@app.route('/api/kits/', methods = ["GET", "POST"])
+@login_required
+def api_kits():
+    if request.method == 'GET':
+        rows = db_get_kits()
+        return jsonify({"kits": rows}), 200
+    
 
 @app.route('/api/jsonv/', methods = ["GET", "POST"])
 @login_required
