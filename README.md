@@ -13,6 +13,16 @@ A new user will be able to:
 4. display their shame for wasting so much money
 
 
+**HOMEPAGE**
+
+<img width="698" alt="image" src="https://github.com/Landwand/gunpla/assets/56357681/a8d6f1fb-97e5-4388-b2dd-630b9f1ff89f">
+
+**Inventory View**
+
+<img width="707" alt="image" src="https://github.com/Landwand/gunpla/assets/56357681/8d8e45ef-dc42-48b6-a596-d65ef7d19ed3">
+
+
+
 ## Installation and running instructions
 
 1. clone the repo
