@@ -41,7 +41,7 @@ Feel free to create your own account and play around with it, or use this 'highl
 ## API
 =======
 
-##API-Login
+### API-Login
 
 `http://localhost:5000/api/login`
 
@@ -90,7 +90,7 @@ Response:
 ```
 
 
-##API-Logout
+### API-Logout
 
 `http://localhost:5000/api/logout`
 
@@ -116,7 +116,7 @@ Response:
 ]
 ```
 
-##API-Kits
+### API-Kits
 `http://localhost:5000/api/kits`
 
 Supported HTTP methods: GET
@@ -125,7 +125,7 @@ Example:
 ```
 GET /api/kits HTTP/1.1
 Host: localhost:5000
-Cookie: session=.eJw9jjEOAjEMBP-SmiK249i5z6A49gkKKO44USD-TiQQ3Y52inml87rFfknLYzvilM5XT0sCRrHKIMQmFYqaqgoVNkPrjSCARKkooxUBC46m4kLIOUpgw1WJOg1gj54HObL3oOKRKyDbMADO0DyvjNGmRBUyerbRzTXNkGOP7Vcz8U_w3fd-i3k90_sDX9Q2tQ.ZaCc7Q.tVfbBiSNsXR6nLVouvCMha-49yY
+Cookie: ******
 ```
 
 Response:
