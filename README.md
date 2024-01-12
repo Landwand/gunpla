@@ -28,8 +28,9 @@ A new user will be able to:
 1. clone the repo
 2. `cd` into the respective folder
 3. create a Python virtual environment using [venv](https://docs.python.org/3/library/venv.html) using the command `python -m venv your-virtual-env-name`
-4. install dependencies using [pip freeze](https://pip.pypa.io/en/stable/cli/pip_freeze/) using the command, `pip install -r requirements.txt`
-5. run using the command `flask run`
+5. start the virtual environment using `source your-virtual-env-name/bin/activate`
+6. install dependencies using [pip freeze](https://pip.pypa.io/en/stable/cli/pip_freeze/) using the command, `pip install -r requirements.txt`
+7. run using the command `flask run`
 
 ## Login
 

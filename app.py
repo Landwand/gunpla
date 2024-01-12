@@ -2,6 +2,7 @@ import os
 from flask import Flask, flash, jsonify, redirect, render_template, request, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
+import json
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # sets up this file as main module, setting folders & files relative to it
@@ -91,7 +92,8 @@ def check_login(username, password):
         app.logger.info("current_user if logged-in?: %s", current_user.is_authenticated)
 
 
-def db_get_kits():
+def get_kit_as_rows_from_db():
+    app.logger.info("%s collection route started")
     conn = sqlite3.connect('gunpla.db')
     conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
     cur = conn.cursor()
@@ -99,6 +101,42 @@ def db_get_kits():
     rows = cur.fetchall()
     return rows
 
+
+def get_kits_list():  
+    with sqlite3.connect('gunpla.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", ('1'))
+        result = cursor.fetchall()
+        
+        """
+        cursor.description is an SQLite attr that provides info about the columns from a query. 
+        It has 7 tuples' worth of info and the 1st item of each tuple is always Column-Name (col[0])    
+        """
+        
+        # list comprehension can replace the entire FOR block, but this is easier for me to understand.
+        column_names = []
+        for col in cursor.description:
+            column_names.append(col[0])
+        # list comprension version: `column_names = [col[0] for col in cursor.description]` 
+
+        # Convert the result to a list of dictionaries
+        kits_list = []
+        for row in result:
+            # `zip` pairs the 1st element of 'column_names' with 1st element of 'row' 
+            # (and so on) as an iterable zip-object
+            kit_dict = dict(zip(column_names, row))
+            kits_list.append(kit_dict)
+
+        # Convert the list of dictionaries to a JSON string
+        # kits_json = json.dumps(kits_list, indent=2)
+        # return kits_json
+        print("Type of kits_list", type(kits_list))
+        print("#########")
+        print(kits_list)
+        kits_list_wrapped = {"kits" : kits_list}
+
+        # return kits_list
+        return kits_list_wrapped
 
 def has_error(inputs):
     app.logger.info("%s has_error started")
@@ -264,12 +302,13 @@ def index():
 @login_required
 def collection(kits):
     app.logger.info("%s collection route started")
-    # conn = sqlite3.connect('gunpla.db')
-    # conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
-    # cur = conn.cursor()
-    # cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
-    # rows = cur.fetchall()
-    rows = db_get_kits()
+    conn = sqlite3.connect('gunpla.db')
+    conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
+    cur = conn.cursor()
+    cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
+    rows = cur.fetchall()
+    
+    # rows = get_kit_as_rows_from_db
     return render_template('collection.html', kits=rows)
 
 
@@ -496,8 +535,11 @@ def show():
 @login_required
 def api_kits():
     if request.method == 'GET':
-        rows = db_get_kits()
-        return jsonify({"kits": rows}), 200
+        kits_list = get_kits_list()
+        response = jsonify(kits_list)
+        response.headers['Content-Type'] = 'application/json'
+        return response, 200
+
     
 
 @app.route('/api/jsonv/', methods = ["GET", "POST"])
@@ -510,4 +552,4 @@ def showv(v="Whatever"):
 
 @app.route('/success', methods=["GET", "POST"])
 def success(action, kit_data):
-    return render_template("success.html", action=action, kit_data=kit_data)    
+    return render_template("success.html", action=action, kit_data=kit_data)
