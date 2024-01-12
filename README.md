@@ -22,7 +22,6 @@ A new user will be able to:
 <img width="707" alt="image" src="https://github.com/Landwand/gunpla/assets/56357681/8d8e45ef-dc42-48b6-a596-d65ef7d19ed3">
 
 
-
 ## Installation and running instructions
 
 1. clone the repo
@@ -30,7 +29,7 @@ A new user will be able to:
 3. create a Python virtual environment using [venv](https://docs.python.org/3/library/venv.html) using the command `python -m venv your-virtual-env-name`
 5. start the virtual environment using `source your-virtual-env-name/bin/activate`
 6. install dependencies using [pip freeze](https://pip.pypa.io/en/stable/cli/pip_freeze/) using the command, `pip install -r requirements.txt`
-7. run using the command `flask run`
+7. run using the command `flask run` -or- use debug mode to see app messaging and enjoy instant-reloading of changes by using `flask run --debug`
 
 ## Login
 
@@ -38,3 +37,134 @@ Feel free to create your own account and play around with it, or use this 'highl
 
 - Username : **w**
 - Password: **w**
+
+## API
+=======
+
+##API-Login
+
+`http://localhost:5000/api/login`
+
+Supported HTTP methods: GET, POST
+
+** Example: using GET to check whether you're logged-in
+**
+```
+GET /api/login HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+Cookie: ******
+```
+
+Response:
+
+```
+
+{
+    "message": "You are logged in!"
+}
+
+```
+
+**Example: using POST to login:
+**
+```
+POST /api/login HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+Cookie: ********
+Content-Length: 42
+
+{
+   "username": "w",
+   "password": "w"
+}
+```
+
+Response:
+
+```
+{
+    "message": "API login successful."
+}
+```
+
+
+##API-Logout
+
+`http://localhost:5000/api/logout`
+
+Supported HTTP methods: POST
+
+Example:
+
+```
+POST /api/logout HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+
+```
+
+Response:
+
+```
+[
+    {
+        "message": "Successfully logged out."
+    },
+    200
+]
+```
+
+##API-Kits
+`http://localhost:5000/api/kits`
+
+Supported HTTP methods: GET
+
+Example:
+```
+GET /api/kits HTTP/1.1
+Host: localhost:5000
+Cookie: session=.eJw9jjEOAjEMBP-SmiK249i5z6A49gkKKO44USD-TiQQ3Y52inml87rFfknLYzvilM5XT0sCRrHKIMQmFYqaqgoVNkPrjSCARKkooxUBC46m4kLIOUpgw1WJOg1gj54HObL3oOKRKyDbMADO0DyvjNGmRBUyerbRzTXNkGOP7Vcz8U_w3fd-i3k90_sDX9Q2tQ.ZaCc7Q.tVfbBiSNsXR6nLVouvCMha-49yY
+```
+
+Response:
+```
+{
+    "kits": [
+        {
+            "condition": "snapped",
+            "grade": "hg",
+            "id": 1,
+            "material": "plastic",
+            "name": "Sheng Long",
+            "notes": "HGAC2",
+            "owner_id": 1,
+            "scale": 144
+        },
+        {
+            "condition": "progress",
+            "grade": "hg",
+            "id": 2,
+            "material": "plastic",
+            "name": "Heavyarms",
+            "notes": "HGAC opened.",
+            "owner_id": 1,
+            "scale": 144
+        },
+        // ... (truncated for brevity)
+        {
+            "condition": "new",
+            "grade": "None",
+            "id": 23,
+            "material": "plastic",
+            "name": "SSS 2002 ver Knight of Gold w Buster Launcher",
+            "notes": "recast",
+            "owner_id": 1,
+            "scale": 100
+        }
+    ]
+}
+'''
+
+
