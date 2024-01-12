@@ -47,8 +47,8 @@ Feel free to create your own account and play around with it, or use this 'highl
 
 Supported HTTP methods: GET, POST
 
-** Example: using GET to check whether you're logged-in
-**
+Example: using GET to check whether you're logged-in
+
 ```
 GET /api/login HTTP/1.1
 Host: localhost:5000
@@ -66,8 +66,8 @@ Response:
 
 ```
 
-**Example: using POST to login:
-**
+Example: using POST to login:
+
 ```
 POST /api/login HTTP/1.1
 Host: localhost:5000
@@ -90,7 +90,7 @@ Response:
 ```
 
 
-### API-Logout
+###API-Logout
 
 `http://localhost:5000/api/logout`
 
@@ -116,7 +116,7 @@ Response:
 ]
 ```
 
-### API-Kits
+###API-Kits
 `http://localhost:5000/api/kits`
 
 Supported HTTP methods: GET
