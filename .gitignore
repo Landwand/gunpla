@@ -1,0 +1,24 @@
+# Virtual environments
+gunpla-env/
+gunpla2-env/
+.venv/
+venv/
+env/
+lib/
+pyvenv.cfg
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE files
+.DS_Store
+.vscode/
+*.swp
+*.swo
+
+# Test files for learning/experimentation
+pydantic_test.py
+test.py

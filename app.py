@@ -1,24 +1,35 @@
 import os
-from flask import Flask, flash, jsonify, redirect, render_template, request, session
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, g, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 import json
 from werkzeug.security import check_password_hash, generate_password_hash
+from db import get_cursor
+
+
 
 # sets up this file as main module, setting folders & files relative to it
 app = Flask(__name__, instance_relative_config=True)
 app.config['SECRET_KEY'] = "I buy too many models"
 
+
  #instantiate the Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-# con = sqlite3.connect("gunpla.db")  
- # threading issue when writing to db -- ask about it
- # isolation level = autocommit > on.  Ask about this, too
-conn = sqlite3.connect('gunpla.db', check_same_thread=False, isolation_level=None) # accesses the DB, or implicitly creates it in DIR
-conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
-cur = conn.cursor()
+
+# helps close the DB conn, even if there is an error.
+@app.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'conn'):
+        try:
+            g.conn.close()
+        except Exception as e:
+            # handle DB closing errors
+            app.logger.error(f"Failed to close database connection: {e}")
+
+    if error:  # handles errors resulting from within the Routes
+        app.logger.error(f"Request ended with error: {error}")
 
 
 # User Class which also has properties of UserMixin (flask-login)
@@ -34,16 +45,14 @@ class User(UserMixin):
 # load User by ID; will return None if doesn't exist
 @login_manager.user_loader
 def load_user(user_id):
-    conn = sqlite3.connect('gunpla.db')
-    c = conn.cursor()
+    cursor = get_cursor()
     try:
-        c.execute("SELECT * FROM users WHERE id=?", (user_id,))
-        user = c.fetchone()
+        cursor.execute("SELECT * FROM users WHERE id=?", (user_id,))
+        user = cursor.fetchone()
     except:
-        app.logger.info("cannot find username from load_user")
+        app.logger.info("error running load_user")
         return None
-    finally:
-        c.close()
+    
     '''
     creates a new instance of User class & return it. * is an UNPACKING OPERATOR, 
     so takes value from 'user' tuple and sends it to the User class constructor.
@@ -53,40 +62,36 @@ def load_user(user_id):
 
 
 def check_for_json(req):
-    if not request.is_json:
-        error_message = {'Error: JSON format is needd.'}
-        return jsonify(error_message), 400
+    if not req.is_json:
+        error_message = "Error: data is not JSON."
+        return jsonify({'error': error_message}, 400)
     return 0
 
 
 def check_login(username, password):
-        # check USERNAME
-        conn = sqlite3.connect('gunpla.db')
-        conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
-        rows = cur.fetchone()
-        conn.close()
+        # check for USERNAME
+        cursor = get_cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        rows = cursor.fetchone()
 
         if rows is None:
-            return "Username invalid"
+            return "no Rows returned for Username in check_login"
 
-        # check PW
         if not check_password_hash(rows[2], password):
-            return "Password invalid"
+            return "Password doesn't exist for check_login"
 
-        # Checks Passed. Remember which user has logged in
+        # Checks Passed.
         session['user_id'] = rows['id']
         username = session['username'] = rows['username']
         password = rows['hash']
         app.logger.info("session @ User_id: %s", session['user_id'],)
-        user = User(id=session['user_id'],username=username,hash=hash)
+        user = User(id=session['user_id'], username=username, hash=password)
         app.logger.info(" user == %s", user)
 
         if login_user(user) == True:
-            app.logger.info("88: login_user successful")
+            app.logger.info("check_login successful")
         else:
-            app.logger.info("90: login_user failed")
+            app.logger.info("check_login failed")
 
         app.logger.info("current_user %s", current_user)
         app.logger.info("current_user if logged-in?: %s", current_user.is_authenticated)
@@ -206,7 +211,7 @@ def has_error(inputs):
 def update_gunpla(action, kit_data=None, kit_id=None):
     if not session['user_id']:
         app.logger.info("update_gunpla: error --- no user_id")
-        return 1
+        return (1,{'message' : "Error: cannot find user_id in session"}) #tuple containing 1(error) and error-message
 
     if kit_data:
         name = str(kit_data['name'])
@@ -236,6 +241,64 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         print("Unknown input - update_gunpla in error")
         app.logger.info("Unknown input - update_gunpla in error")
         return 1 # error
+
+# Refactoring various other routes into a series of RESTful endpts
+
+@app.route('/api/collection', methods=['GET'])
+@login_required
+def get_collection():
+    cursor = get_cursor()
+    params = (session['user_id'],) # tuple for SQL
+    cursor.execute("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", params)
+    rows = cursor.fetchall()
+    return jsonify([dict(row) for row in rows]) # see below
+
+
+    """
+    list comprehension explained:
+
+    [dict(row) for row in rows]
+    #│        │  │   │   │
+    #│        │  │   │   └─ "iterate through this collection"
+    #│        │  │   └───── "each item is called 'row'"
+    #│        │  └───────── "for each iteration, do this:"
+    #│        └──────────── "convert 'row' to dictionary"
+    #└─────────────────── "collect all results in a list"
+
+    "Create a list where, for each row in rows, convert that row to a dictionary"
+    # Template:
+    [TRANSFORM(item) for item in COLLECTION]
+    
+    """
+
+@app.route('/api/kit/<int:kit_id>', methods=['GET'])
+@login_required
+def get_one_kit(kit_id):
+    cursor = get_cursor()
+    params = (kit_id, session['user_id'])
+    cursor.execute("SELECT * FROM gunpla WHERE id = ? AND owner_id = ?", params)
+    row = cursor.fetchone()
+
+    if row: 
+        return jsonify(dict(row)) # only Dicts can be JSONified
+    else: 
+        return jsonify({'error': 'Kit not found.'}), 404
+    
+
+@app.route('/api/kit/', methods=['POST'])
+@login_required
+def add_kit():
+    kit_data = request.get_json()
+    attributes = [
+        'id',
+        'grade',
+        'scale'
+    ]
+
+    
+
+
+
 
 
 # no caching of request responses into browser to ensure accuracy when building/troubleshooting
@@ -396,7 +459,6 @@ def login():
         if rows is None:
             return render_template('error.html', msg="username is wrong!")
 
-        # check PW
         if not check_password_hash(rows[2], password):
             return render_template('error.html', msg="Password error!")
 
