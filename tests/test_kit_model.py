@@ -1,6 +1,5 @@
-import pytest
 from models.kit_model import KitModel
-from pydantic import ValidationError
+# from pydantic import ValidationError
 
 class TestKitModel:
     """Test the KitModel validation logic"""

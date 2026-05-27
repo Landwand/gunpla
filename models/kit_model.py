@@ -8,6 +8,7 @@ class KitModel(BaseModel):
     
     # Required Fields
     name: str
+    owner_id: int
     condition: str = "new"
     material: str = "plastic"
     

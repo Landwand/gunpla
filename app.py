@@ -4,8 +4,9 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import sqlite3
 import json
 from werkzeug.security import check_password_hash, generate_password_hash
-from db import get_cursor
-
+from db import db_get_cursor, db_close, db_get_collection
+from utils import check_for_json, has_error, validate_req_data
+from models.kit_model import KitModel
 
 
 # sets up this file as main module, setting folders & files relative to it
@@ -18,19 +19,11 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 
-# helps close the DB conn, even if there is an error.
+# must wrap close_db() with app.teardown_appcontext in main app file due to how Flask works. 
+# This will close_db() with every http req.
 @app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'conn'):
-        try:
-            g.conn.close()
-        except Exception as e:
-            # handle DB closing errors
-            app.logger.error(f"Failed to close database connection: {e}")
-
-    if error:  # handles errors resulting from within the Routes
-        app.logger.error(f"Request ended with error: {error}")
-
+def close_db_with_teardown(error):
+    db_close(error)
 
 # User Class which also has properties of UserMixin (flask-login)
 class User(UserMixin):
@@ -45,7 +38,7 @@ class User(UserMixin):
 # load User by ID; will return None if doesn't exist
 @login_manager.user_loader
 def load_user(user_id):
-    cursor = get_cursor()
+    cursor = db_get_cursor()
     try:
         cursor.execute("SELECT * FROM users WHERE id=?", (user_id,))
         user = cursor.fetchone()
@@ -59,13 +52,6 @@ def load_user(user_id):
     '''
     if user:
         return User(*user)
-
-
-def check_for_json(req):
-    if not req.is_json:
-        error_message = "Error: data is not JSON."
-        return jsonify({'error': error_message}, 400)
-    return 0
 
 
 def check_login(username, password):
@@ -97,7 +83,7 @@ def check_login(username, password):
         app.logger.info("current_user if logged-in?: %s", current_user.is_authenticated)
 
 
-def get_kit_as_rows_from_db():
+def db_get_kits_as_rows():
     app.logger.info("%s collection route started")
     conn = sqlite3.connect('gunpla.db')
     conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
@@ -107,110 +93,9 @@ def get_kit_as_rows_from_db():
     return rows
 
 
-def get_kits_list():  
-    with sqlite3.connect('gunpla.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", ('1'))
-        result = cursor.fetchall()
-        
-        """
-        cursor.description is an SQLite attr that provides info about the columns from a query. 
-        It has 7 tuples' worth of info and the 1st item of each tuple is always Column-Name (col[0])    
-        """
-        
-        # list comprehension can replace the entire FOR block, but this is easier for me to understand.
-        column_names = []
-        for col in cursor.description:
-            column_names.append(col[0])
-        # list comprension version: `column_names = [col[0] for col in cursor.description]` 
-
-        # Convert the result to a list of dictionaries
-        kits_list = []
-        for row in result:
-            # `zip` pairs the 1st element of 'column_names' with 1st element of 'row' 
-            # (and so on) as an iterable zip-object
-            kit_dict = dict(zip(column_names, row))
-            kits_list.append(kit_dict)
-
-        # Convert the list of dictionaries to a JSON string
-        # kits_json = json.dumps(kits_list, indent=2)
-        # return kits_json
-        print("Type of kits_list", type(kits_list))
-        print("#########")
-        print(kits_list)
-        kits_list_wrapped = {"kits" : kits_list}
-
-        # return kits_list
-        return kits_list_wrapped
-
-def has_error(inputs):
-    app.logger.info("%s has_error started")
-
-    #initilize return values
-    is_error = 0 # 1 in case-of error
-    msg = "good"
-    kit_vals = inputs
-        
-    name = inputs['name']
-    scale = inputs['scale']
-    notes = inputs['notes']
-    condition = inputs['condition']
-    grade = inputs['grade']
-    material = inputs['material']
-    
-    if len(name) < 1:
-        msg = "name too short"
-        app.logger.info(msg)
-        is_error = 1
-        return is_error, msg, kit_vals  
-    if not condition:
-        condition = 'new'
-    if not grade:
-        grade = None
-    if not material:
-        material = 'plastic'
-    if not notes:
-        notes = None
-
-    if not scale:
-        match grade:
-            case "hg":
-                scale = 144
-            case "fg":
-                scale = 144
-            case "rg":
-                scale = 144
-            case "mg":
-                scale = 100
-            case "eg":
-                scale = 144
-            case "pg":
-                scale = 60
-            case _:
-                scale = None
-
-    if scale:
-        try:
-            if int(scale) < 1:
-                is_error = 1
-                msg = "scale too small"
-                return is_error, msg, kit_vals
-        except:
-            msg = "ERROR: 'Scale' not a valid number!"
-            is_error = 1
-            return is_error, msg, kit_vals
-
-    # save corrected form inputs to kit_vals and prep to return
-    kit_vals = {}
-    for variable in ["name", "scale", "grade", "condition", "material", "notes"]:
-        kit_vals[variable] = eval(variable)
-    # check_value: 0 = good, 1 = error
-    return is_error, msg, kit_vals
-
-
-def update_gunpla(action, kit_data=None, kit_id=None):
+def db_update_gunpla(action, kit_data=None, kit_id=None):
     if not session['user_id']:
-        app.logger.info("update_gunpla: error --- no user_id")
+        app.logger.info("db_update_gunpla: error --- no user_id")
         return (1,{'message' : "Error: cannot find user_id in session"}) #tuple containing 1(error) and error-message
 
     if kit_data:
@@ -220,7 +105,7 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         condition = str(kit_data['condition'])
         grade = str(kit_data['grade'])
         material = str(kit_data['material'])
-        app.logger.info("update gunpla - kit data confirmed")
+        app.logger.info("db_update_gunpla - kit data confirmed")
 
     if action == "create":
         cur.execute("INSERT INTO gunpla (name, scale , material, notes, condition, grade, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)", \
@@ -229,7 +114,7 @@ def update_gunpla(action, kit_data=None, kit_id=None):
 
     elif action == "update" or action == "edit":
         cur.execute("UPDATE gunpla SET name = ?, scale = ?, material = ?, notes = ?, condition = ?, grade = ? WHERE id = ?", (name, scale, material, notes, condition, grade, kit_id))               
-        app.logger.info("FUNC: update_gunpla EDIT now completed!!!!! %s")
+        app.logger.info("FUNC: db_update_gunpla EDIT now completed!!!!! %s")
         conn.commit()
         return 0
 
@@ -238,8 +123,8 @@ def update_gunpla(action, kit_data=None, kit_id=None):
         return 0
 
     else:
-        print("Unknown input - update_gunpla in error")
-        app.logger.info("Unknown input - update_gunpla in error")
+        print("Unknown input - db_update_gunpla in error")
+        app.logger.info("Unknown input - db_update_gunpla in error")
         return 1 # error
 
 # Refactoring various other routes into a series of RESTful endpts
@@ -247,55 +132,80 @@ def update_gunpla(action, kit_data=None, kit_id=None):
 @app.route('/api/collection', methods=['GET'])
 @login_required
 def get_collection():
-    cursor = get_cursor()
-    params = (session['user_id'],) # tuple for SQL
-    cursor.execute("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", params)
-    rows = cursor.fetchall()
-    return jsonify([dict(row) for row in rows]) # see below
+    """Retrieve all kits for the logged-in user."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User not logged in.'}), 401
 
+    # Use the refactored function from db.py
+    kits = db_get_collection(user_id)
+    return jsonify({'kits': kits}), 200
 
-    """
-    list comprehension explained:
-
-    [dict(row) for row in rows]
-    #│        │  │   │   │
-    #│        │  │   │   └─ "iterate through this collection"
-    #│        │  │   └───── "each item is called 'row'"
-    #│        │  └───────── "for each iteration, do this:"
-    #│        └──────────── "convert 'row' to dictionary"
-    #└─────────────────── "collect all results in a list"
-
-    "Create a list where, for each row in rows, convert that row to a dictionary"
-    # Template:
-    [TRANSFORM(item) for item in COLLECTION]
-    
-    """
 
 @app.route('/api/kit/<int:kit_id>', methods=['GET'])
 @login_required
-def get_one_kit(kit_id):
-    cursor = get_cursor()
-    params = (kit_id, session['user_id'])
-    cursor.execute("SELECT * FROM gunpla WHERE id = ? AND owner_id = ?", params)
-    row = cursor.fetchone()
+def get_kit(kit_id):
+    """Retrieve a specific kit by its ID."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User not logged in.'}), 401
 
-    if row: 
-        return jsonify(dict(row)) # only Dicts can be JSONified
-    else: 
+    with sqlite3.connect('gunpla.db') as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM gunpla WHERE id = ? AND owner_id = ?", (kit_id, user_id))
+        row = cursor.fetchone()
+
+    if row:
+        return jsonify(dict(row)), 200
+    else:
         return jsonify({'error': 'Kit not found.'}), 404
     
 
+# this route looks incomplete; it validates the data, but does it actually summon the fn create_kit ()?
 @app.route('/api/kit/', methods=['POST'])
 @login_required
-def add_kit():
-    kit_data = request.get_json()
-    attributes = [
-        'id',
-        'grade',
-        'scale'
-    ]
+def create_kit():
+    json_success, result = check_for_json(request)
+    if not json_success:
+        return jsonify({'error': result}), 400  # Use the error message from `check_for_json`
 
+    data = request.get_json()
+    data['owner_id'] = session['user_id']
     
+    validation_success, validated_kit_data = validate_req_data(**data)
+
+    if validation_success:
+        # db_create_kit(**validated_kit_data) # pass into DB function
+        db_create_kit(**validated_kit_data.model_dump())  # Use model_dump() instead of dict()
+
+        response = {
+            'message': 'Kit added successfully',
+            'kit': validated_kit_data
+        }
+        status_code = 201
+    else:
+        response = {
+        'error': validated_kit_data['message'],
+        'details': validated_kit_data['details']
+        }  
+        status_code = 400
+        
+    return jsonify(response), status_code
+
+
+@app.route('/api/kit/', methods=['DELETE'])
+@login_required
+def delete_kit():
+    json_success, result = check_for_json(request)
+    if not json_success:
+        return jsonify({'error': result}), 400  # Use the error message from `check_for_json`
+    
+    data = request.get_json()
+    data['owner_id'] = session['user_id']
+    data['kit_id'] 
+
+
 
 
 
@@ -354,7 +264,7 @@ def index():
         
         if has_error_result == 0:
             kit_data = kit_vals
-            update_gunpla(action="create", kit_data=kit_data)      
+            db_update_gunpla(action="create", kit_data=kit_data)      
         else:
             return render_template('error.html', msg = msg)
         
@@ -365,14 +275,10 @@ def index():
 @login_required
 def collection(kits):
     app.logger.info("%s collection route started")
-    conn = sqlite3.connect('gunpla.db')
-    conn.row_factory = sqlite3.Row # use built-in Row-factory to help parse Tuples
-    cur = conn.cursor()
-    cur.execute ("SELECT * FROM gunpla WHERE owner_id = ? ORDER BY id ASC", (session['user_id'],))
-    rows = cur.fetchall()
-    
+    collected_rows = db_get_collection(session['user_id'])
+
     # rows = get_kit_as_rows_from_db
-    return render_template('collection.html', kits=rows)
+    return render_template('collection.html', kits=collected_rows)
 
 
 @app.route('/edit/<kit_id>', methods=["GET", "POST"])
@@ -408,7 +314,7 @@ def edit(kit_id=None):
         if request.form.get("choice") == "Delete Kit":
             app.logger.info("%s (id) delete chosen from EDIT page ",kit_id)
 
-            if update_gunpla(action="delete",kit_id=kit_id) == 1 :
+            if db_update_gunpla(action="delete",kit_id=kit_id) == 1 :
                 app.logger.info("Kit id = %s , Error with update_gunpla DELETE ", kit_id)
             else:
                 app.logger.info("update_gunpla function DELETE successful")
@@ -421,7 +327,7 @@ def edit(kit_id=None):
 
             if has_error_result == 0:
                 kit_data = kit_vals
-                update_gunpla(kit_data=kit_data, action="update", kit_id = kit_id) 
+                db_update_gunpla(kit_data=kit_data, action="update", kit_id = kit_id) 
                 return render_template("success.html", action="add", kit_data=kit_data)        
             else:
                 return render_template('error.html', msg = msg)
@@ -591,18 +497,7 @@ def show():
         'color': 'pink'
     }
     return jsonify(chammy_data), 400
-
-
-@app.route('/api/kits/', methods = ["GET", "POST"])
-@login_required
-def api_kits():
-    if request.method == 'GET':
-        kits_list = get_kits_list()
-        response = jsonify(kits_list)
-        response.headers['Content-Type'] = 'application/json'
-        return response, 200
-
-    
+ 
 
 @app.route('/api/jsonv/', methods = ["GET", "POST"])
 @login_required
