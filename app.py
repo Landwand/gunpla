@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import sqlite3
 import json
 from werkzeug.security import check_password_hash, generate_password_hash
-from db import db_get_cursor, db_close, db_get_collection
+from db import db_get_cursor, db_close, db_create_kit, db_get_collection, db_get_kit, db_delete_kit
 from utils import check_for_json, has_error, validate_req_data
 from models.kit_model import KitModel
 
@@ -56,7 +56,7 @@ def load_user(user_id):
 
 def check_login(username, password):
         # check for USERNAME
-        cursor = get_cursor()
+        cursor = db_get_cursor()
         cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
         rows = cursor.fetchone()
 

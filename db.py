@@ -71,22 +71,6 @@ def db_get_collection(user_id):
     return [dict(row) for row in rows]
 
 
-def db_create_kit():
-    """
-    Create a kit by data and owner ID (session).
-    Returns:
-        dict | None
-    """
-    conn = db_get_conn()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cur.execute("INSERT INTO gunpla(name, scale , material, notes, condition, grade, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)", \
-            (name, scale, material, notes, condition, grade, session['user_id']))
-        return 0 
-    row = cursor.fetchone()
-    return dict(row) if row else None
-
-
 
 def db_get_kit(kit_id: int, user_id: int) -> dict | None:
     """
