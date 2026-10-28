@@ -6,6 +6,10 @@ venv/
 env/
 lib/
 pyvenv.cfg
+*venv*/
+
+# local databases
+*.db
 
 # Python cache files
 __pycache__/
