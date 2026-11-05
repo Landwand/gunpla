@@ -1,7 +1,6 @@
 from unittest.mock import patch, MagicMock
-from db import db_create_kit
 import sqlite3
-
+from db import db_create_kit # convention states to import your own stuff last
 
 class TestDBCreateKit:
     def test_create_kit_success(self, serpent) -> None:
@@ -45,8 +44,10 @@ class TestDBCreateKit:
 
         # Act
 
-        # the 'new=MagicMock' instructs MM to replace replace db.current_app 
-        # with this exact object, and don’t inspect the original.
+        # current_app needs a running Flask app, which tests don't have (thus, error.)
+        # the 'new=MagicMock()' instructs patch to replace db.current_app
+        # w/o inspecting it (causes errors). This solves the problems; fakes current_app 
+        # and the inspection-> error problem
         with patch('db.db_get_cursor', return_value=mock_cursor), \
             patch('db.current_app', new=MagicMock()) as mock_app:
             result = db_create_kit(data)
@@ -54,4 +55,4 @@ class TestDBCreateKit:
         # Assert
         assert result["success"] is False
         assert result["error"] == "Database failed to create kit: Database exploded!"
-        mock_app.logger.error.assert_called_once() # assert that this was actually used
+        mock_app.logger.error.assert_called_once() # assert that the error was actually logged
