@@ -2,6 +2,7 @@ from unittest.mock import patch, MagicMock
 import sqlite3
 from db import db_create_kit # convention states to import your own stuff last
 
+
 class TestDBCreateKit:
     def test_create_kit_success(self, serpent) -> None:
         # ARRANGE: set the stage
@@ -14,6 +15,7 @@ class TestDBCreateKit:
         mock_cursor = MagicMock()
 
         # ACT: let the real code perform on a rigged stage
+
         # `with patch(...)` swaps the real db_get_cursor in db.py for a fake,
         # but ONLY inside this block. The real one comes back afterwards.
         # return_value=mock_cursor: whenever db_get_cursor() is called,
@@ -27,6 +29,7 @@ class TestDBCreateKit:
             result = db_create_kit(data)
 
         # ASSERT: review the performance
+
         # These check what db_create_kit RETURNED (our logic, the "cashier").
         assert result["success"] is True
         assert result["message"] == f"Kit {data.get('name')} created successfully"
@@ -35,24 +38,23 @@ class TestDBCreateKit:
         # once, and returns None if it was. No `assert` in front.
         mock_cursor.execute.assert_called_once()
 
-
     def test_create_kit_db_error(self, serpent) -> None:
-        # Arrange
+        # ARRANGE
         data = serpent.model_dump()
         mock_cursor = MagicMock()
         mock_cursor.execute.side_effect = sqlite3.Error("Database exploded!")
 
-        # Act
+        # ACT
 
         # current_app needs a running Flask app, which tests don't have (thus, error.)
         # the 'new=MagicMock()' instructs patch to replace db.current_app
         # w/o inspecting it (causes errors). This solves the problems; fakes current_app 
         # and the inspection-> error problem
         with patch('db.db_get_cursor', return_value=mock_cursor), \
-            patch('db.current_app', new=MagicMock()) as mock_app:
+            patch('db.current_app', new=MagicMock()) as mock_app: # used in final test
             result = db_create_kit(data)
 
-        # Assert
+        # ASSERT
         assert result["success"] is False
         assert result["error"] == "Database failed to create kit: Database exploded!"
         mock_app.logger.error.assert_called_once() # assert that the error was actually logged
