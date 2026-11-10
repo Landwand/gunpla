@@ -147,8 +147,6 @@ def get_collection():
 def get_kit(kit_id):
     """Retrieve a specific kit by its ID."""
     user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'User not logged in.'}), 401
 
     with sqlite3.connect('gunpla.db') as conn:
         conn.row_factory = sqlite3.Row
@@ -202,13 +200,11 @@ def delete_kit():
         return jsonify({'error': result}), 400  # Use the error message from `check_for_json`
     
     data = request.get_json()
-    data['owner_id'] = session['user_id']
-    data['kit_id'] 
-
-
-
-
-
+    response = db_delete_kit(kit_id=data.get("kit_id"), user_id=session['user_id'])
+    if response.get("success") == False:
+        return jsonify({"error": response.get("error")}), 400
+    
+    return jsonify({"message": f"Kit id {data.get("kit_id")} deleted successfully"}), 200
 
 
 # no caching of request responses into browser to ensure accuracy when building/troubleshooting
